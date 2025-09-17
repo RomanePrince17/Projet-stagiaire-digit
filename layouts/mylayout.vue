@@ -191,12 +191,11 @@
   </div>
 </template>
 
-
 <script lang="ts" setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import DashboardIcon from '@/components/icons/dashboardicon.vue'
-import Supports from '@/components/entreprise/supports.vue'
+import supports from '@/components/entreprise/supports.vue'
 import notifIcon from '@/assets/images/nav_img/notif.png'
 import settingIcon from '@/assets/images/nav_img/setting.png'
 
@@ -207,7 +206,7 @@ onClickOutside(menuRef, () => { isOpen.value = false })
 
 const navItems = [
   { name: 'Statistiques', path: '/dashboard_entreprise/statistiques', icon: DashboardIcon },
-  { name: 'Demandes reçues', path: '/dashboard_entreprise/candidatures/liste', icon: Supports },
+  { name: 'Demandes reçues', path: '/dashboard_entreprise/candidatures/liste', icon: supports },
 ]
 
 /* ==== Thème ==== */
