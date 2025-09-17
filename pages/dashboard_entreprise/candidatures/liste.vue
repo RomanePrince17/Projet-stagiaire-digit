@@ -1,122 +1,192 @@
-<script setup>
-import { ref, computed } from 'vue'
+<template>
+  <section :class="['min-h-screen px-6 py-8 max-w-6xl mx-auto', mainClass]">
 
-definePageMeta({ layout: 'mylayout' })
+    <!-- Filtre par type -->
+    <div class="mb-28">
+      <select v-model="selectedType" @change="resetStatusOnTypeChange"
+              class="bg-gray-500 text-white px-4 py-2 rounded">
+        <option value="all">Tous</option>
+        <option value="Scolaire">Académique</option>
+        <option value="Professionnel">Professionnel</option>
+      </select>
+    </div>
 
-// 📄 Données simulées
-const allDemandes = ref([
-  {
-    nom: 'Jean Dupont',
-    photo: '/photos/jean.jpg',
-    domaine: 'UI/UX Designer',
-    typeStage: 'Professionnel',
-    duree: 3,
-    dateDebut: '2025-08-01',
-    statut: 'Accepté',
-    lettre: '/lettres/lettre-jean.pdf'
-  },
-  {
-    nom: 'Alice Martin',
-    photo: '/photos/alice.jpg',
-    domaine: 'Frontend Developer',
-    typeStage: 'Scolaire',
-    duree: 2,
-    dateDebut: '2025-09-15',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-alice.pdf'
-  },
-  {
-    nom: 'Karim El Amrani',
-    photo: '/photos/karim.jpg',
-    domaine: 'Data Analyst',
-    typeStage: 'Professionnel',
-    duree: 6,
-    dateDebut: '2025-07-01',
-    statut: 'Refusé',
-    lettre: '/lettres/lettre-karim.pdf'
-  },
-  {
-    nom: 'Léa Dubois',
-    photo: '/photos/lea.jpg',
-    domaine: 'Backend Developer',
-    typeStage: 'Professionnel',
-    duree: 4,
-    dateDebut: '2025-10-01',
-    statut: 'Accepté',
-    lettre: '/lettres/lettre-lea.pdf'
-  },
-  {
-    nom: 'Dylan Moreau',
-    photo: '/photos/dylan.jpg',
-    domaine: 'DevOps',
-    typeStage: 'Scolaire',
-    duree: 3,
-    dateDebut: '2025-11-10',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-dylan.pdf'
-  },
-  {
-    nom: 'Nora Benali',
-    photo: '/photos/nora.jpg',
-    domaine: 'QA Engineer',
-    typeStage: 'Scolaire',
-    duree: 2,
-    dateDebut: '2025-09-01',
-    statut: 'Refusé',
-    lettre: '/lettres/lettre-nora.pdf'
-  },
-  {
-    nom: 'Khadija El Idrissi',
-    photo: '/photos/khadija.jpg',
-    domaine: 'Mobile Developer',
-    typeStage: 'Professionnel',
-    duree: 5,
-    dateDebut: '2025-12-01',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-khadija.pdf'
-  }
-])
+    <!-- Filtres de statut -->
+    <div class="relative mb-6 border-b border-gray-700 overflow-x-auto no-scrollbar">
+      <div class="flex gap-6 w-max px-2">
+        <div v-for="filter in statusFilters" :key="filter" @click="changeStatus(filter)"
+             class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
+                    hover:bg-[#6E38E0] hover:text-white"
+             :class="selectedStatus === filter ? 'bg-[#6E38E0] text-white font-semibold' : textClass">
+          {{ getFilterLabel(filter) }}
+        </div>
+      </div>
+    </div>
 
+    <!-- Tableau -->
+    <div class="p-4 rounded-lg shadow-md transition-colors bg-[#5a2fc4]/10">
 
-const today = new Date()
+      <!-- Spinner loading -->
+      <div v-if="loading" class="flex flex-col items-center justify-center py-10">
+        <svg class="animate-spin h-12 w-12 mb-4 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+      </div>
 
-const getStatutActuel = (demande) => {
-  const debut = new Date(demande.dateDebut)
-  const fin = new Date(debut)
-  fin.setMonth(fin.getMonth() + demande.duree)
+      <table v-if="!loading" class="w-full border rounded-lg">
+        <thead class="text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">Nom</th>
+            <th class="px-4 py-3 text-left">Domaine</th>
+            <th class="px-4 py-3 text-left">Type</th>
+            <th class="px-4 py-3 text-left">Durée</th>
+            <th class="px-4 py-3 text-left">Début</th>
+            <th class="px-4 py-3 text-left">Lettre</th>
+            <th v-if="hasAnyActions" class="px-4 py-3 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="demande in paginatedDemandes" :key="demande.id" :class="hoverClass">
+            <td class="px-4 py-2" :class="textClass">{{ demande.nom }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.domaine }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.typeStage }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.duree }} mois</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
+            <td class="px-4 py-2">
+              <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download
+                 class="bg-[#6E38E0] text-white px-3 py-1 rounded text-sm">Voir</a>
+              <span v-else class="text-gray-400 text-sm">Aucune</span>
+            </td>
+            <td v-if="hasAnyActions" class="px-4 py-2 flex gap-2 flex-wrap">
+              <button @click="handleAction('accepter', demande)" 
+                      class="p-2 rounded-full bg-[#1e7e34] flex items-center justify-center"
+                      :disabled="demande.processingType">
+                <CheckIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+                <svg v-else-if="demande.processingType === 'accepter'" class="animate-spin h-5 w-5 text-white" 
+                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+              </button>
 
-  if (demande.statut === 'Refusé') return 'Refusé'
-  if (demande.statut === 'En attente') return 'En attente'
-  if (today < debut) return 'Accepté'
-  if (today >= debut && today <= fin) return 'En cours'
-  if (today > fin) return 'Terminé'
-  return 'Inconnu'
-}
+              <button @click="handleAction('refuser', demande)" 
+                      class="p-2 rounded-full bg-[#922026] flex items-center justify-center"
+                      :disabled="demande.processingType">
+                <XMarkIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+                <svg v-else-if="demande.processingType === 'refuser'" class="animate-spin h-5 w-5 text-white" 
+                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+              </button>
 
-const statusColors = {
-  'Accepté': 'bg-green-500',
-  'En attente': 'bg-yellow-500',
-  'En cours': 'bg-blue-500',
-  'Terminé': 'bg-gray-500',
-  'Refusé': 'bg-red-500',
-  'Inconnu': 'bg-gray-600'
-}
-const statusColor = (status) => statusColors[status] || 'bg-gray-600'
+              <button @click="handleAction('reviser', demande)" 
+                      class="p-2 rounded-full bg-[#b58500] flex items-center justify-center"
+                      :disabled="demande.processingType">
+                <PencilSquareIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+              </button>
+            </td>
+          </tr>
 
-// 🔍 Filtres & Pagination
-const selectedFilter = ref('Tous')
+          <tr v-if="!paginatedDemandes.length">
+            <td colspan="7" class="text-center py-6 text-gray-400">Aucune demande trouvée.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="mt-6 flex justify-center gap-2">
+        <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" 
+                class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Précédent</button>
+        <button v-for="page in totalPages" :key="page" @click="changePage(page)"
+                :class="[currentPage === page ? 'bg-[#6E38E0] text-white' : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 'px-3 py-1 rounded']">
+          {{ page }}
+        </button>
+        <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" 
+                class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Suivant</button>
+      </div>
+    </div>
+
+    <!-- Modal Révision -->
+    <div v-if="revisionModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+        <h2 class="text-white text-lg font-semibold mb-4">Réviser la demande</h2>
+        <label class="text-gray-200">Durée (mois)</label>
+        <input v-model="revisionModal.duration" type="number" class="w-full mb-4 p-2 rounded text-black"/>
+        <label class="text-gray-200">Date de début</label>
+        <input v-model="revisionModal.startDate" type="date" class="w-full mb-4 p-2 rounded text-black"/>
+        <div class="flex justify-end gap-2">
+          <button @click="revisionModal.visible = false" class="px-4 py-2 bg-gray-600 rounded text-white">Annuler</button>
+          <button @click="submitRevision" class="px-4 py-2 bg-[#b58500] rounded text-white">Valider</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Toast -->
+    <div v-if="feedbackModal.visible"
+         :class="['fixed top-6 right-6 px-4 py-2 rounded shadow-lg flex items-center gap-2 z-50',
+                  feedbackModal.type === 'success' ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900']">
+      <span>{{ feedbackModal.message }}</span>
+      <button @click="feedbackModal.visible = false" class="font-bold">&times;</button>
+    </div>
+
+  </section>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { CheckIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
+
+definePageMeta({ ssr: false, layout: 'mylayout' })
+defineProps<{
+  mainClass: string,
+  textClass: string,
+  hoverClass: string
+}>()
+
+const allDemandes = ref<any[]>([])
+const loading = ref(true)
+const error = ref(null)
+const token = ref(localStorage.getItem('auth_token') || null)
+
+const selectedType = ref('all')
+const selectedStatus = ref('pending')
 const itemsPerPage = 5
 const currentPage = ref(1)
 
+const statusLabels = { pending: 'En attente', accepted: 'Accepté', rejected: 'Refusé', revised: 'Révisé' }
+const statusFilters = ['pending', 'accepted', 'rejected', 'revised']
+
+const revisionModal = ref({ visible: false, demande: null, duration: '', startDate: '' })
+const feedbackModal = ref({ visible: false, message: '', type: 'success' })
+
+function showFeedback(message: string, type: string = 'success') {
+  feedbackModal.value = { visible: true, message, type }
+  setTimeout(() => { feedbackModal.value.visible = false }, 3000)
+}
+
+function resetStatusOnTypeChange() {
+  selectedStatus.value = 'pending'
+  currentPage.value = 1
+}
+
+function changeStatus(newStatus: string) {
+  selectedStatus.value = newStatus
+  currentPage.value = 1
+}
+
+function changePage(page: number) {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
+
+const getFilterLabel = (status: string) => statusLabels[status] || status
+
 const filteredDemandes = computed(() => {
-  if (selectedFilter.value === 'Tous') return allDemandes.value
-
-  const statutFilters = ['En attente', 'Accepté', 'En cours', 'Terminé', 'Refusé']
-  if (statutFilters.includes(selectedFilter.value)) {
-    return allDemandes.value.filter(d => getStatutActuel(d) === selectedFilter.value)
-  }
-
-  return allDemandes.value.filter(d => d.typeStage === selectedFilter.value)
+  let filtered = allDemandes.value
+  if (selectedType.value !== 'all') filtered = filtered.filter(d => d.typeStage === selectedType.value)
+  if (selectedStatus.value !== 'all') filtered = filtered.filter(d => d.status === selectedStatus.value)
+  return filtered
 })
 
 const totalPages = computed(() => Math.ceil(filteredDemandes.value.length / itemsPerPage))
@@ -124,157 +194,88 @@ const paginatedDemandes = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredDemandes.value.slice(start, start + itemsPerPage)
 })
+const hasAnyActions = computed(() => paginatedDemandes.value.some(d => d.status === 'pending'))
 
-const changePage = (page) => {
-  if (page >= 1 && page <= totalPages.value) currentPage.value = page
-}
+async function handleAction(type: string, demande: any) {
+  if (demande.status !== 'pending' || demande.processingType) return
 
-// 💡 Vérifie s'il y a des actions possibles pour afficher la colonne
-const hasAnyActions = computed(() =>
-  paginatedDemandes.value.some((demande) => getStatutActuel(demande) !== 'En cours')
-)
+  demande.processingType = type
 
-// 🎯 Action handlers
-const handleAction = (type, demande) => {
-  switch (type) {
-    case 'accepter':
-      demande.statut = 'Accepté'
-      break
-    case 'refuser':
-      demande.statut = 'Refusé'
-      break
-    case 'reviser':
-      const message = prompt(`Entrez un message de révision pour "${demande.domaine}" :`)
-      if (message) {
-        // Simulation d'envoi d'email
-        console.log(`📩 Mail envoyé pour révision : ${message}`)
-        alert('Message de révision envoyé.')
-      }
-      break
+  if (type === 'reviser') {
+    revisionModal.value = { visible: true, demande, duration: demande.duree, startDate: demande.dateDebut }
+    delete demande.processingType
+    return
+  }
+
+  const action = type === 'accepter' ? 'accept' : type === 'refuser' ? 'reject' : null
+  if (!action) return
+
+  try {
+    const res = await fetch(`https://digit-cursus-backend.onrender.com/api/demandes/internship-requests/${demande.id}/approve-reject/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action })
+    })
+    if (!res.ok) throw new Error(`Erreur: ${res.status}`)
+    demande.status = action === 'accept' ? 'accepted' : 'rejected'
+    showFeedback(`Demande ${action === 'accept' ? 'acceptée' : 'refusée'} avec succès.`)
+  } catch (err: any) {
+    showFeedback(`Erreur lors de la mise à jour: ${err.message}`, 'error')
+  } finally {
+    delete demande.processingType
   }
 }
-</script>
-<template>
-  <section class="min-h-screen bg-[#0f0f12] text-gray-100 px-6 py-8 max-w-6xl mx-auto">
-    <!-- 🧭 Filtre -->
-    <div class="mb-6 flex flex-wrap gap-4 items-center">
-      <button
-        v-for="filter in ['Tous', 'En attente', 'Accepté', 'En cours', 'Terminé', 'Professionnel', 'Scolaire']"
-        :key="filter"
-        @click="selectedFilter = filter; currentPage = 1"
-        :class="[
-          'px-4 py-2 rounded text-sm',
-          selectedFilter === filter ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        ]"
-      >
-        {{ filter }}
-      </button>
-    </div>
-    <!-- 📋 Tableau -->
-    <div class="bg-[#15151b] p-4 rounded-lg shadow-md">
-      <div class="overflow-x-auto">
-        <table class="w-full border border-gray-700 rounded-lg">
-          <thead class="bg-[#1F2937]">
-            <tr>
-              <th class="px-4 py-3 text-left">Profile</th>
-              <th class="px-4 py-3 text-left">Domaine</th>
-              <th class="px-4 py-3 text-left">Type</th>
-              <th class="px-4 py-3 text-left">Durée</th>
-              <th class="px-4 py-3 text-left">Début</th>
-              <th class="px-4 py-3 text-left">Lettre</th>
-              <th class="px-4 py-3 text-left">Statut</th>
-              <th v-if="hasAnyActions" class="px-4 py-3 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(demande, index) in paginatedDemandes"
-              :key="index"
-              class="hover:bg-[#2d2d33]"
-            >
-            <td class="px-4 py-2 flex gap-3">
-              <img :src="demande.photo" alt="Photo" class="w-10 h-10 rounded-full object-cover" />
-              <span>{{ demande.nom }}</span>
-            </td>
-              <td class="px-4 py-2">{{ demande.domaine }}</td>
-              <td class="px-4 py-2">{{ demande.typeStage }}</td>
-              <td class="px-4 py-2">{{ demande.duree }} mois</td>
-              <td class="px-4 py-2">{{ demande.dateDebut }}</td>
-              <td class="px-4 py-2">
-                <a
-                  :href="demande.lettre"
-                  target="_blank"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                  download
-                >
-                  Voir 
-                </a>
-              </td>
-              <td class="px-4 py-2">
-                <span :class="['px-2 py-1 rounded text-white text-sm', statusColor(getStatutActuel(demande))]">
-                  {{ getStatutActuel(demande) }}
-                </span>
-              </td>
-              <td v-if="hasAnyActions" class="px-4 py-2">
-                  <div class="flex gap-2 flex-wrap md:flex-nowrap sm:flex-nowrap">
-                <template v-if="getStatutActuel(demande) !== 'En cours'">
-                  <button
-                    v-if="['En attente', 'Refusé'].includes(getStatutActuel(demande))"
-                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('accepter', demande)"
-                  >
-                    Accepter
-                  </button>
-                  <button
-                    v-if="['En attente', 'Accepté', 'Terminé'].includes(getStatutActuel(demande))"
-                    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('refuser', demande)"
-                  >
-                    Refuser
-                  </button>
 
-                  <button
-                    v-if="['Accepté', 'Refusé', 'Terminé'].includes(getStatutActuel(demande))"
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('reviser', demande)"
-                  >
-                    Réviser
-                  </button>
-                </template>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <!-- 📚 Pagination -->
-      <div class="mt-6 flex justify-center gap-2">
-        <button
-          @click="changePage(currentPage - 1)"
-          :disabled="currentPage === 1"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Précédent
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="changePage(page)"
-          :class="[
-            'px-3 py-1 rounded',
-            currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          ]"
-        >
-          {{ page }}
-        </button>
-        <button
-          @click="changePage(currentPage + 1)"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Suivant
-        </button>
-      </div>
-    </div>
-  </section>
-</template>
+async function submitRevision() {
+  const { demande, duration, startDate } = revisionModal.value
+  demande.processingType = 'reviser'
+  try {
+    const res = await fetch(`https://digit-cursus-backend.onrender.com/api/demandes/internship-requests/${demande.id}/revise/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ revised_duration: `${duration} months`, revised_start_date: startDate })
+    })
+    if (!res.ok) throw new Error(`Erreur API: ${res.status}`)
+    demande.status = 'revised'
+    demande.duree = parseInt(duration)
+    demande.dateDebut = startDate
+    revisionModal.value.visible = false
+    showFeedback('Demande révisée avec succès.', 'success')
+  } catch (err: any) {
+    showFeedback(`Erreur lors de la révision: ${err.message}`, 'error')
+  } finally {
+    delete demande.processingType
+  }
+}
+
+onMounted(async () => {
+  try {
+    if (!token.value) throw new Error('Token non trouvé')
+    const res = await fetch('https://digit-cursus-backend.onrender.com/api/demandes/admin/internships/', {
+      headers: { 'Authorization': `Bearer ${token.value}`, 'Content-Type': 'application/json' }
+    })
+    if (!res.ok) throw new Error(`Erreur API: ${res.status}`)
+    const data = await res.json()
+    allDemandes.value = Array.isArray(data) ? data.map(item => ({
+      id: item.id,
+      nom: `${item.profile_personal?.first_name || ''} ${item.profile_personal?.last_name || ''}`.trim() || `Utilisateur #${item.id}`,
+      domaine: item.domain_name || 'Non précisé',
+      typeStage: item.request_type === 'academic' ? 'Scolaire' : 'Professionnel',
+      duree: parseInt(item.duration),
+      dateDebut: item.start_date,
+      lettre: item.recommendation_letter || item.demand_letter || '#',
+      status: item.status
+    })) : []
+  } catch (err: any) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+})
+</script>

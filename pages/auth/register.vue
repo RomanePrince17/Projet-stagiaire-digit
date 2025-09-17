@@ -1,7 +1,5 @@
 <template>
   <div class="relative min-h-screen flex items-center bg-[url('/assets/images/monfond.jpg')] bg-cover bg-center justify-center px-4">
-    
-
     <!-- Overlay sombre -->
     <div class="absolute inset-0 bg-black/70 z-10"></div>
 
@@ -21,6 +19,7 @@
             required
           />
         </div>
+
         <!-- Email -->
         <div class="mb-4">
           <label class="block mb-1 text-sm font-medium text-white">Email</label>
@@ -48,14 +47,21 @@
             @click="showPassword = !showPassword"
             class="absolute top-[38px] right-3 text-white/80 hover:text-white"
           >
-            <!-- Place ici ton icône eye ou eye-off -->
+            <!-- Icône à insérer (eye/eye-off) -->
           </button>
         </div>
 
         <!-- Bouton d'inscription -->
-        <BaseButton type="submit" class="w-full" :disabled="loading">
-          <span v-if="loading">Création...</span>
-          <span v-else>S'inscrire</span>
+        <BaseButton type="submit" class="w-full flex items-center justify-center gap-2" :disabled="loadingRegister">
+          <svg v-if="loadingRegister" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          <span v-if="loadingRegister">Création...</span>
+          <span v-else>
+           
+            S'inscrire
+          </span>
         </BaseButton>
       </form>
 
@@ -63,6 +69,19 @@
         Déjà inscrit ?
         <NuxtLink to="/auth/login" class="text-white hover:underline font-medium">Se connecter</NuxtLink>
       </p>
+
+      <!-- Bouton retour -->
+      <div class="mt-6 text-center">
+        <button
+          @click="$router.back()"
+          class="inline-flex items-center px-6 py-2 rounded-full border border-white/50 text-white hover:bg-white/10 transition font-medium"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour
+        </button>
+      </div>
 
       <p v-if="errorMessage" class="text-red-400 text-sm text-center mt-4">
         {{ errorMessage }}
@@ -80,11 +99,11 @@ import BaseButton from '../components/base/button.vue'
 const router = useRouter()
 const form = ref({ username: '', email: '', password: '' })
 const showPassword = ref(false)
-const loading = ref(false)
+const loadingRegister = ref(false)
 const errorMessage = ref('')
 
 const handleRegister = async () => {
-  loading.value = true
+  loadingRegister.value = true
   errorMessage.value = ''
 
   try {
@@ -95,9 +114,7 @@ const handleRegister = async () => {
         email: form.value.email,
         password: form.value.password
       },
-      {
-        headers: { 'Content-Type': 'application/json' }
-      }
+      { headers: { 'Content-Type': 'application/json' } }
     )
 
     console.log('✅ Inscription réussie', response.data)
@@ -115,7 +132,7 @@ const handleRegister = async () => {
       errorMessage.value = 'Une erreur est survenue. Veuillez réessayer plus tard.'
     }
   } finally {
-    loading.value = false
+    loadingRegister.value = false
   }
 }
 

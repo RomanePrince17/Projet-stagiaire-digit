@@ -1,42 +1,205 @@
-<script setup>
-import { ref, computed } from 'vue'
-import { Bar } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js'
+<template>
+  <section :class="['min-h-screen mt-20 px-4 sm:px-6 py-8 max-w-7xl mx-auto', mainClass]">
+    <!-- Titre -->
+    <div :class="['text-2xl font-bold mb-6', textClass]">
+      Mes demandes de stages
+    </div>
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+    <!-- Bande de filtres horizontale -->
+    <div class="relative mb-6 border-b border-gray-700 overflow-x-auto no-scrollbar">
+      <div class="flex gap-6 w-max px-2">
+        <div
+          v-for="filter in statusFilters"
+          :key="filter"
+          @click="changeStatus(filter)"
+          class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
+                 hover:bg-gradient-to-r hover:from-[#FF5F36] hover:to-[#6E38E0] hover:text-white"
+          :class="selectedFilter === filter ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold' : textClass"
+        >
+          {{ filter }}
+          <span
+            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#FF5F36] transition-opacity duration-200"
+            :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
+          ></span>
+        </div>
+      </div>
+    </div>
 
-definePageMeta({ layout: 'default' })
+    <!-- Bouton nouvelle demande -->
+    <div class="flex justify-end mb-4">
+      <NuxtLink
+        to="/dashboard/demande-stage"
+        class="px-4 py-2 rounded text-sm text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+               hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
+      >
+        Faire une demande
+      </NuxtLink>
+    </div>
 
-// 📊 Statistiques globales
-const stats = ref({
-  totalCandidatures: 3,
-  candidaturesAcceptees: 1,
-  candidaturesRefusees: 7,
-  candidaturesEnAttente: 2
+    <!-- Loading & erreurs -->
+    <div v-if="loading" class="flex justify-center items-center my-10">
+      <svg
+        class="animate-spin h-10 w-10"
+        :class="theme === 'dark' ? 'text-white' : 'text-[#FF5F36]'"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          :class="theme === 'dark' ? 'fill-white' : 'fill-[#FF5F36]'"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+        ></path>
+      </svg>
+    </div>
+    <div v-if="error" class="text-red-400 text-center my-10">{{ error }}</div>
+
+    <!-- Tableau -->
+    <div v-if="!loading && !error" class="overflow-x-auto rounded-lg shadow-md">
+      <table class="min-w-[700px] w-full border rounded-lg text-sm sm:text-base border-gray-300 dark:border-gray-600">
+        <thead class="transition-colors bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">Domaine</th>
+            <th class="px-4 py-3 text-left">Type</th>
+            <th class="px-4 py-3 text-left">Durée</th>
+            <th class="px-4 py-3 text-left">Début</th>
+            <th class="px-4 py-3 text-left">Lettre</th>
+            <th class="px-4 py-3 text-left">Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(demande, index) in paginatedDemandes"
+            :key="index"
+            :class="hoverClass"
+          >
+            <td class="px-4 py-2" :class="textClass">{{ demande.domaine }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.typeStage }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.duree }} mois</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
+            <td class="px-4 py-2" :class="textClass">
+              <a
+                v-if="demande.lettre"
+                :href="demande.lettre"
+                target="_blank"
+                class="px-3 py-1 rounded text-sm text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+                       hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
+                download
+              >
+                Voir
+              </a>
+              <span v-else class="text-gray-400 text-sm">Aucune</span>
+            </td>
+            <td class="px-4 py-2">
+              <span :class="['px-2 py-1 rounded text-sm', statusColor(getStatutActuel(demande))]">
+                {{ getStatutActuel(demande) }}
+              </span>
+            </td>
+            
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="!loading && !error" class="mt-6 flex flex-wrap justify-center gap-2">
+      <button
+        @click="changePage(currentPage - 1)"
+        :disabled="currentPage === 1"
+        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+               hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
+      >
+        Précédent
+      </button>
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        @click="changePage(page)"
+        :class="[ 
+          'px-3 py-1 rounded',
+          currentPage === page
+            ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white'
+            : ['border border-gray-300 dark:border-gray-600', textClass, hoverClass]
+        ]"
+      >
+        {{ page }}
+      </button>
+      <button
+        @click="changePage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+               hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
+      >
+        Suivant
+      </button>
+    </div>
+  </section>
+</template>
+
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+
+// Props pour thème
+const props = defineProps<{ mainClass: string; textClass: string; hoverClass: string }>()
+const mainClass = props.mainClass
+const textClass = props.textClass
+const hoverClass = props.hoverClass
+
+// Données
+const allDemandes = ref<any[]>([])
+const loading = ref(false)
+const error = ref('')
+
+// Thème
+const theme = ref('light')
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    theme.value = localStorage.getItem('theme') || 'light'
+  }
 })
 
-// 📄 Données des demandes
-const allDemandes = ref([
-  { domaine: 'UI/UX Designer', typeStage: 'Professionnel', duree: 3, dateDebut: '2025-08-01', statut: 'Accepté', lettre: '/lettres/lettre-jean.pdf' },
-  { domaine: 'Frontend Developer', typeStage: 'Scolaire', duree: 2, dateDebut: '2025-09-15', statut: 'En attente', lettre: '/lettres/lettre-alice.pdf' },
-  { domaine: 'Data Analyst', typeStage: 'Professionnel', duree: 6, dateDebut: '2025-07-01', statut: 'Refusé', lettre: '/lettres/lettre-karim.pdf' },
-  { domaine: 'Backend Developer', typeStage: 'Professionnel', duree: 4, dateDebut: '2025-10-01', statut: 'Accepté', lettre: '/lettres/lettre-lea.pdf' },
-  { domaine: 'DevOps', typeStage: 'Scolaire', duree: 3, dateDebut: '2025-11-10', statut: 'En attente', lettre: '/lettres/lettre-dylan.pdf' },
-  { domaine: 'QA Engineer', typeStage: 'Scolaire', duree: 2, dateDebut: '2025-09-01', statut: 'Refusé', lettre: '/lettres/lettre-nora.pdf' },
-  { domaine: 'Mobile Developer', typeStage: 'Professionnel', duree: 5, dateDebut: '2025-12-01', statut: 'En attente', lettre: '/lettres/lettre-khadija.pdf' }
-])
+// Récupération API
+const fetchDemandes = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    const response = await fetch('https://digit-cursus-backend.onrender.com/api/demandes/internships', {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` })
+      }
+    })
+    if (!response.ok) throw new Error('Erreur lors de la récupération des demandes')
+    const data = await response.json()
+    allDemandes.value = data.map((d: any) => ({
+      domaine: d.domain || 'Non précisé',
+      typeStage: d.request_type === 'academic' ? 'Scolaire' : 'Professionnel',
+      duree: parseInt(d.duration),
+      dateDebut: d.start_date,
+      statut: d.status === 'pending' ? 'En attente' : d.status === 'approved' ? 'Accepté' : d.status === 'rejected' ? 'Refusé' : d.status,
+      lettre: d.recommendation_letter || ''
+    }))
+  } catch (err: any) {
+    error.value = err.message || 'Erreur inconnue'
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(fetchDemandes)
 
-// 📅 Statut calculé dynamiquement
+// Statut dynamique
 const today = new Date()
-const getStatutActuel = (demande) => {
+const getStatutActuel = (demande: any) => {
   const debut = new Date(demande.dateDebut)
   const fin = new Date(debut)
   fin.setMonth(fin.getMonth() + demande.duree)
@@ -49,146 +212,43 @@ const getStatutActuel = (demande) => {
   return 'Inconnu'
 }
 
-// 🎨 Couleur par statut
-const statusColor = (status) => {
-  switch (status) {
-    case 'Accepté': return 'bg-green-500'
-    case 'En attente': return 'bg-yellow-500'
-    case 'En cours': return 'bg-blue-500'
-    case 'Terminé': return 'bg-gray-500'
-    case 'Refusé': return 'bg-red-500'
-    default: return 'bg-gray-600'
+// Couleurs pour statuts
+function statusColor(statut: string) {
+  switch (statut) {
+    case 'Accepté': return 'bg-[#5a2fc4] text-white'
+    case 'En cours': return 'bg-[#5a2fc4] text-white'
+    case 'Terminé': return 'bg-[#5a2fc4] text-white'
+    case 'En attente': return 'bg-[#5a2fc4] text-white'
+    case 'Refusé': return 'bg-red-500 text-white'
+    default: return 'bg-gray-500 text-white'
   }
 }
 
-// 🔍 Filtres & Pagination
-const selectedFilter = ref('Tous')
+// Pagination & filtres
 const itemsPerPage = 5
 const currentPage = ref(1)
+
+const statusFilters = ['Tous', 'En attente', 'Accepté', 'En cours', 'Terminé', 'Refusé']
+const selectedFilter = ref('Tous')
 
 const filteredDemandes = computed(() => {
   if (selectedFilter.value === 'Tous') return allDemandes.value
   return allDemandes.value.filter(d => getStatutActuel(d) === selectedFilter.value)
 })
 
-const totalPages = computed(() => Math.ceil(filteredDemandes.value.length / itemsPerPage))
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredDemandes.value.length / itemsPerPage)))
 
 const paginatedDemandes = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredDemandes.value.slice(start, start + itemsPerPage)
 })
 
-const changePage = (page) => {
+function changePage(page: number) {
   if (page >= 1 && page <= totalPages.value) currentPage.value = page
 }
+
+function changeStatus(filter: string) {
+  selectedFilter.value = filter
+  currentPage.value = 1
+}
 </script>
-
-<template>
-  <section class="min-h-screen bg-[#0f0f12] text-gray-100 px-6 py-8 max-w-6xl mx-auto">
-    <div class="text-2xl mb-6">Mes demandes de stages</div>
-    <!-- Filtres -->
-    <div class="mb-4 flex flex-wrap gap-3 items-center">
-      <button
-        v-for="filter in ['Tous', 'En attente', 'Accepté', 'En cours', 'Terminé']"
-        :key="filter"
-        @click="selectedFilter = filter; currentPage = 1"
-        :class="[
-          'px-4 py-2 rounded text-sm',
-          selectedFilter === filter ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        ]"
-      >
-        {{ filter }}
-      </button>
-    </div>
-
-    <!-- Tableau -->
-    <div class="bg-[#15151b] p-3 rounded-lg shadow-md">
-      <NuxtLink  to="/dashboard/demande-stage" class="mb-5  bg-pink-600 hover:bg-pink-700 px-4 py-2  rounded text-white">Faire une demande</NuxtLink>
-      <div class="overflow-x-auto">
-        <table class="w-full border border-gray-700 rounded-lg">
-          <thead class="bg-[#1F2937]">
-            <tr>
-              <th class="px-4 py-3 text-left">Domaine</th>
-              <th class="px-4 py-3 text-left">Type</th>
-              <th class="px-4 py-3 text-left">Durée</th>
-              <th class="px-4 py-3 text-left">Début</th>
-              <th class="px-4 py-3 text-left">Lettre</th>
-              <th class="px-4 py-3 text-left">Statut</th>
-              <th class="px-4 py-3 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(demande, index) in paginatedDemandes"
-              :key="index"
-              class="hover:bg-[#374151]"
-            >
-              <td class="px-4 py-2">{{ demande.domaine }}</td>
-              <td class="px-4 py-2">{{ demande.typeStage }}</td>
-              <td class="px-4 py-2">{{ demande.duree }} mois</td>
-              <td class="px-4 py-2">{{ demande.dateDebut }}</td>
-              <td class="px-4 py-2">
-                <a
-                  :href="demande.lettre"
-                  target="_blank"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                  download
-                >
-                  Voir la lettre
-                </a>
-              </td>
-              <td class="px-4 py-2">
-                <span :class="['px-2 py-1 rounded text-white text-sm', statusColor(getStatutActuel(demande))]">
-                  {{ getStatutActuel(demande) }}
-                </span>
-              </td>
-              <td class="px-4 py-2 flex gap-2">
-                <button
-                  v-if="['En attente', 'Accepté', 'En cours', 'Terminé', 'Refusé'].includes(getStatutActuel(demande))"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                >
-                  Voir
-                </button>
-                <button
-                  v-if="getStatutActuel(demande) === 'En attente'"
-                  class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm"
-                >
-                  Modifier
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="mt-6 flex justify-center gap-2">
-        <button
-          @click="changePage(currentPage - 1)"
-          :disabled="currentPage === 1"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Précédent
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="changePage(page)"
-          :class="[
-            'px-3 py-1 rounded',
-            currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          ]"
-        >
-          {{ page }}
-        </button>
-        <button
-          @click="changePage(currentPage + 1)"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Suivant
-        </button>
-      </div>
-    </div>
-  </section>
-</template>

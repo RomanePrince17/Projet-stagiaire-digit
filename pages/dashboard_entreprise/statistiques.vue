@@ -1,121 +1,88 @@
-<script setup>
-import { ref, onMounted } from 'vue'
-import { Bar, Doughnut } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-} from 'chart.js'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { CheckIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
 
-// Enregistrement des composants Chart.js
-ChartJS.register(Title, Tooltip, Legend, BarElement, ArcElement, CategoryScale, LinearScale)
-definePageMeta({
-  layout: 'mylayout'
-})
-// Statistiques simulées (remplace par API)
+definePageMeta({ ssr: false, layout: 'mylayout' })
+
+// Props venant du layout
+defineProps<{
+  mainClass: string,
+  textClass: string,
+  hoverClass: string
+}>()
+
+// --- Données & état ---
+const allDemandes = ref<any[]>([])
+const loading = ref(true)      // Chargement global
+const tableLoading = ref(false)
+const error = ref('')
+const token = ref(null)
+
+// --- Statistiques ---
 const stats = ref({
-  totalCandidatures: 45,
-  candidaturesAcceptees: 12,
-  candidaturesRefusees: 20,
-  candidaturesEnAttente: 13,
-  totalOffres: 10,
-  offresPubliees: 7,
-  offresBrouillons: 3,
+  totalCandidatures: 0,
+  candidaturesAcceptees: 0,
+  candidaturesRefusees: 0,
+  candidaturesEnAttente: 0
 })
-// Données pour le graphique barres (offres vs candidatures)
-const barData = ref({
-  labels: ['Offres publiées', 'Offres brouillons'],
-  datasets: [
-    {
-      label: 'Offres',
-      backgroundColor: ['#3b82f6', '#9ca3af'],
-      data: [stats.value.offresPubliees, stats.value.offresBrouillons],
-    },
-  ],
-})
-// 📄 Données simulées
-const allDemandes = ref([
-  {
-    nom: 'Jean Dupont',
-    photo: '/photos/jean.jpg',
-    domaine: 'UI/UX Designer',
-    typeStage: 'Professionnel',
-    duree: 3,
-    dateDebut: '2025-08-01',
-    statut: 'Accepté',
-    lettre: '/lettres/lettre-jean.pdf'
-  },
-  {
-    nom: 'Alice Martin',
-    photo: '/photos/alice.jpg',
-    domaine: 'Frontend Developer',
-    typeStage: 'Scolaire',
-    duree: 2,
-    dateDebut: '2025-09-15',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-alice.pdf'
-  },
-  {
-    nom: 'Karim El Amrani',
-    photo: '/photos/karim.jpg',
-    domaine: 'Data Analyst',
-    typeStage: 'Professionnel',
-    duree: 6,
-    dateDebut: '2025-07-01',
-    statut: 'Refusé',
-    lettre: '/lettres/lettre-karim.pdf'
-  },
-  {
-    nom: 'Léa Dubois',
-    photo: '/photos/lea.jpg',
-    domaine: 'Backend Developer',
-    typeStage: 'Professionnel',
-    duree: 4,
-    dateDebut: '2025-10-01',
-    statut: 'Accepté',
-    lettre: '/lettres/lettre-lea.pdf'
-  },
-  {
-    nom: 'Dylan Moreau',
-    photo: '/photos/dylan.jpg',
-    domaine: 'DevOps',
-    typeStage: 'Scolaire',
-    duree: 3,
-    dateDebut: '2025-11-10',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-dylan.pdf'
-  },
-  {
-    nom: 'Nora Benali',
-    photo: '/photos/nora.jpg',
-    domaine: 'QA Engineer',
-    typeStage: 'Scolaire',
-    duree: 2,
-    dateDebut: '2025-09-01',
-    statut: 'Refusé',
-    lettre: '/lettres/lettre-nora.pdf'
-  },
-  {
-    nom: 'Khadija El Idrissi',
-    photo: '/photos/khadija.jpg',
-    domaine: 'Mobile Developer',
-    typeStage: 'Professionnel',
-    duree: 5,
-    dateDebut: '2025-12-01',
-    statut: 'En attente',
-    lettre: '/lettres/lettre-khadija.pdf'
+const animatedStats = ref({ ...stats.value })
+
+// --- Modals / Feedback ---
+const confirmationModal = ref({ visible: false, title: '', message: '', action: null, demande: null })
+const revisionModal = ref({ visible: false, demande: null, duration: '', startDate: '' })
+const feedbackModal = ref({ visible: false, message: '', type: 'success' })
+
+function showFeedback(message: string, type: string = 'success') {
+  feedbackModal.value = { visible: true, message, type }
+  setTimeout(() => { feedbackModal.value.visible = false }, 3000)
+}
+
+function confirmAction(type: string, demande: any) {
+  confirmationModal.value = {
+    visible: true,
+    title: `Confirmer l'action`,
+    message: `Êtes-vous sûr de vouloir ${type === 'accepter' ? 'accepter' : type === 'refuser' ? 'refuser' : 'réviser'} la demande de "${demande.nom}" ?`,
+    action: type,
+    demande
   }
-])
+}
 
+async function executeConfirmedAction() {
+  const { action, demande } = confirmationModal.value
+  confirmationModal.value.visible = false
+  await handleAction(action, demande)
+}
 
+// --- Filtres & pagination ---
+const statusFilters = ['Tous', 'En attente', 'Accepté', 'Refusé', 'Révisé']
+const selectedFilter = ref('Tous')
+const itemsPerPage = 5
+const currentPage = ref(1)
+
+function changePage(page: number) {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
+
+function changeStatus(filter: string) {
+  selectedFilter.value = filter
+  currentPage.value = 1
+}
+
+const filteredDemandes = computed(() => {
+  if (selectedFilter.value === 'Tous') return allDemandes.value
+  return allDemandes.value.filter(d => d.statut === selectedFilter.value)
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredDemandes.value.length / itemsPerPage)))
+
+const paginatedDemandes = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredDemandes.value.slice(start, start + itemsPerPage)
+})
+
+// --- Statut dynamique et couleurs ---
 const today = new Date()
-
-const getStatutActuel = (demande) => {
+const getStatutActuel = (demande: any) => {
   const debut = new Date(demande.dateDebut)
   const fin = new Date(debut)
   fin.setMonth(fin.getMonth() + demande.duree)
@@ -128,219 +95,229 @@ const getStatutActuel = (demande) => {
   return 'Inconnu'
 }
 
-const statusColors = {
-  'Accepté': 'bg-green-500',
-  'En attente': 'bg-yellow-500',
-  'En cours': 'bg-blue-500',
-  'Terminé': 'bg-gray-500',
-  'Refusé': 'bg-red-500',
-  'Inconnu': 'bg-gray-600'
-}
-const statusColor = (status) => statusColors[status] || 'bg-gray-600'
-
-// 🔍 Filtres & Pagination
-const selectedFilter = ref('Tous')
-const itemsPerPage = 5
-const currentPage = ref(1)
-
-const filteredDemandes = computed(() => {
-  if (selectedFilter.value === 'Tous') return allDemandes.value
-
-  const statutFilters = ['En attente', 'Accepté', 'En cours', 'Terminé', 'Refusé']
-  if (statutFilters.includes(selectedFilter.value)) {
-    return allDemandes.value.filter(d => getStatutActuel(d) === selectedFilter.value)
-  }
-
-  return allDemandes.value.filter(d => d.typeStage === selectedFilter.value)
-})
-
-const totalPages = computed(() => Math.ceil(filteredDemandes.value.length / itemsPerPage))
-const paginatedDemandes = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return filteredDemandes.value.slice(start, start + itemsPerPage)
-})
-
-const changePage = (page) => {
-  if (page >= 1 && page <= totalPages.value) currentPage.value = page
-}
-
-// 💡 Vérifie s'il y a des actions possibles pour afficher la colonne
-const hasAnyActions = computed(() =>
-  paginatedDemandes.value.some((demande) => getStatutActuel(demande) !== 'En cours')
-)
-
-// 🎯 Action handlers
-const handleAction = (type, demande) => {
-  switch (type) {
-    case 'accepter':
-      demande.statut = 'Accepté'
-      break
-    case 'refuser':
-      demande.statut = 'Refusé'
-      break
-    case 'reviser':
-      const message = prompt(`Entrez un message de révision pour "${demande.domaine}" :`)
-      if (message) {
-        // Simulation d'envoi d'email
-        console.log(`📩 Mail envoyé pour révision : ${message}`)
-        alert('Message de révision envoyé.')
-      }
-      break
+function statusColor(statut: string) {
+  switch (statut) {
+    case 'Accepté': return 'bg-[#1e7e34] text-white'
+    case 'En cours': return 'bg-[#5a2fc4] text-white'
+    case 'Révisé': return 'bg-[#b58500] text-white'
+    case 'Refusé': return 'bg-[#922026] text-white'
+    case 'En attente': return 'bg-[#5a2fc4] text-white'
+    default: return 'bg-gray-500 text-white'
   }
 }
+
+// --- Actions ---
+async function handleAction(type: string, demande: any) {
+  if (demande.status && demande.status !== 'pending') return
+  demande.processingType = type
+
+  if (type === 'reviser') {
+    revisionModal.value = { visible: true, demande, duration: demande.duree, startDate: demande.dateDebut }
+    return
+  }
+
+  const action = type === 'accepter' ? 'accept' : type === 'refuser' ? 'reject' : null
+  if (!action) return
+
+  try {
+    const res = await fetch(`https://digit-cursus-backend.onrender.com/api/demandes/internship-requests/${demande.id}/approve-reject/`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    })
+    if (!res.ok) throw new Error(`Erreur: ${res.status}`)
+    demande.statut = action === 'accept' ? 'Accepté' : 'Refusé'
+    showFeedback(`Demande ${action === 'accept' ? 'acceptée' : 'refusée'} avec succès.`)
+  } catch (err: any) {
+    showFeedback(`Erreur lors de la mise à jour: ${err.message}`, 'error')
+  } finally {
+    delete demande.processingType
+  }
+}
+
+// --- Fetch API ---
+onMounted(async () => {
+  try {
+    token.value = localStorage.getItem('auth_token')
+    if (!token.value) throw new Error('Token non trouvé')
+
+    const res = await fetch('https://digit-cursus-backend.onrender.com/api/demandes/internships', {
+      headers: { 'Authorization': `Bearer ${token.value}`, 'Content-Type': 'application/json' }
+    })
+    if (!res.ok) throw new Error('Erreur lors de la récupération des demandes')
+
+    const data = await res.json()
+    allDemandes.value = data.map((d: any) => ({
+      id: d.id,
+      nom: `${d.profile_personal?.first_name || ''} ${d.profile_personal?.last_name || ''}`.trim() || `Utilisateur #${d.id}`,
+      domaine: d.domain || 'Non précisé',
+      typeStage: d.request_type === 'academic' ? 'Scolaire' : 'Professionnel',
+      duree: parseInt(d.duration),
+      dateDebut: d.start_date,
+      lettre: d.recommendation_letter || '',
+      statut: d.status === 'pending' ? 'En attente' : d.status === 'approved' ? 'Accepté' : d.status === 'rejected' ? 'Refusé' : d.status
+    }))
+
+    // Mettre à jour les stats
+    stats.value.totalCandidatures = allDemandes.value.length
+    stats.value.candidaturesAcceptees = allDemandes.value.filter(d => d.statut === 'Accepté').length
+    stats.value.candidaturesRefusees = allDemandes.value.filter(d => d.statut === 'Refusé').length
+    stats.value.candidaturesEnAttente = allDemandes.value.filter(d => d.statut === 'En attente').length
+  } catch (err: any) {
+    error.value = err.message || 'Erreur inconnue'
+  } finally {
+    loading.value = false
+    tableLoading.value = false
+  }
+})
+
+// --- Animation des statistiques ---
+function animateStat(key: string, value: number, duration = 2000) {
+  const stepTime = 50
+  const steps = Math.ceil(duration / stepTime)
+  let current = 0
+  const increment = value / steps
+  const interval = setInterval(() => {
+    current += increment
+    animatedStats.value[key] = Math.ceil(current)
+    if (current >= value) {
+      animatedStats.value[key] = value
+      clearInterval(interval)
+    }
+  }, stepTime)
+}
+
+onMounted(() => {
+  Object.keys(stats.value).forEach(k => animateStat(k, stats.value[k as keyof typeof stats.value]))
+})
 </script>
 
 <template>
-  <section class="min-h-screen bg-[#0f0f12] text-gray-100 px-6 py-8 max-w-6xl mx-auto">
-    <header class="mb-8">
-      <h1 class="text-3xl font-semibold">Statistiques</h1>
-      <p class="text-gray-400 mt-1">Visualisez les performances de vos offres et candidatures.</p>
-    </header>
+<section :class="['min-h-screen mt-10 px-6 max-w-6xl mx-auto', mainClass]">
 
-    <!-- Cartes de synthèse -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-6 mb-10">
-       <div class="bg-[#15151b] p-6 rounded-lg shadow-md text-center">
-        <p class="text-4xl font-bold text-yellow-400">{{ stats.candidaturesEnAttente }}</p>
-        <p class="text-gray-300 mt-1">En attente</p>
-      </div>
-      <div class="bg-[#15151b] p-6 rounded-lg shadow-md text-center">
-        <p class="text-4xl font-bold text-green-400">{{ stats.candidaturesAcceptees }}</p>
-        <p class="text-gray-300 mt-1">Candidatures acceptées</p>
-      </div>
-      <div class="bg-[#15151b] p-6 rounded-lg shadow-md text-center">
-        <p class="text-4xl font-bold text-red-400">{{ stats.candidaturesRefusees }}</p>
-        <p class="text-gray-300 mt-1">Candidatures refusées</p>
-      </div>
+
+
+  <!-- Loading / Erreur global -->
+  <div v-if="loading" class="flex flex-col  items-center justify-center py-10">
+    <svg class="animate-spin h-12 w-12 mb-4 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+  </div>
+  <div v-else-if="error" class="flex flex-col items-center py-10">
+    <p class="text-red-500 mb-4">{{ error }}</p>
+    <button @click="fetchDemandes" class="px-4 py-2 rounded bg-[#5a2fc4] hover:bg-[#4a23a6] text-white">
+      Recharger
+    </button>
+  </div>
+
+  <!-- Statistiques -->
+  <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
+    <div class="p-6 rounded-lg shadow-sm text-center transition-colors">
+      <p class="text-4xl font-bold bg-[#6E38E0] bg-clip-text text-transparent">
+        {{ animatedStats.totalCandidatures }}
+      </p>
+      <p class="text-gray-400 mt-1">Stages totaux</p>
     </div>
-    <div class="text-2xl mb-6">Demandes recues</div>
-    
+    <div class="p-6 rounded-lg shadow-sm text-center transition-colors">
+      <p class="text-4xl font-bold bg-[#6E38E0] bg-clip-text text-transparent">
+        {{ animatedStats.candidaturesEnAttente }}
+      </p>
+      <p class="text-gray-400 mt-1">Stages en attente</p>
+    </div>
+  </div>
 
-    <!-- Tableau -->
-    <!-- 🧭 Filtre -->
-    <div class="mb-6 flex flex-wrap gap-4 items-center">
-      <button
-        v-for="filter in ['Tous', 'En attente', 'Accepté', 'En cours', 'Terminé', 'Professionnel', 'Scolaire']"
+  <!-- Bande de filtres horizontale -->
+  <div class="relative mb-6 border-b border-gray-700 overflow-x-auto no-scrollbar">
+    <div class="flex gap-6 w-max px-2">
+      <div
+        v-for="filter in statusFilters"
         :key="filter"
-        @click="selectedFilter = filter; currentPage = 1"
-        :class="[
-          'px-4 py-2 rounded text-sm',
-          selectedFilter === filter ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        ]"
+        @click="changeStatus(filter)"
+        class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
+               hover:bg-[#6E38E0] hover:text-white"
+        :class="selectedFilter === filter ? 'bg-[#6E38E0] text-white font-semibold' : textClass"
       >
         {{ filter }}
-      </button>
+        <span
+          class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#6E38E0] transition-opacity duration-200"
+          :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
+        ></span>
+      </div>
     </div>
-    <!-- 📋 Tableau -->
-    <div class="bg-[#15151b] p-4 rounded-lg shadow-md">
-      <div class="overflow-x-auto">
-        <table class="w-full border border-gray-700 rounded-lg">
-          <thead class="bg-[#1F2937]">
-            <tr>
-              <th class="px-4 py-3 text-left">Profile</th>
-              <th class="px-4 py-3 text-left">Domaine</th>
-              <th class="px-4 py-3 text-left">Type</th>
-              <th class="px-4 py-3 text-left">Durée</th>
-              <th class="px-4 py-3 text-left">Début</th>
-              <th class="px-4 py-3 text-left">Lettre</th>
-              <th class="px-4 py-3 text-left">Statut</th>
-              <th v-if="hasAnyActions" class="px-4 py-3 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(demande, index) in paginatedDemandes"
-              :key="index"
-              class="hover:bg-[#2d2d33]"
-            >
-            <td class="px-4 py-2 flex gap-3">
-              <img :src="demande.photo" alt="Photo" class="w-10 h-10 rounded-full object-cover" />
-              <span>{{ demande.nom }}</span>
+  </div>
+
+  <!-- Tableau -->
+  <div class="p-4 rounded-lg shadow-md transition-colors  bg-[#5a2fc4]/10">
+    
+
+    <div class="relative overflow-x-auto">
+      <!-- Spinner tableau -->
+      <div v-if="tableLoading" class="flex justify-center items-center py-20 bg-white/70 dark:bg-black/50">
+        <svg class="animate-spin h-10 w-10 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+      </div>
+      <table class="w-full border rounded-lg" v-show="!tableLoading">
+        <thead class="text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">Nom</th>
+            <th class="px-4 py-3 text-left">Domaine</th>
+            <th class="px-4 py-3 text-left">Type</th>
+            <th class="px-4 py-3 text-left">Durée</th>
+            <th class="px-4 py-3 text-left">Début</th>
+            <th class="px-4 py-3 text-left">Lettre</th>
+            <th class="px-4 py-3 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="demande in paginatedDemandes" :key="demande.id" :class="hoverClass">
+            <td class="px-4 py-2" :class="textClass">{{ demande.nom }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.domaine }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.typeStage }}</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.duree }} mois</td>
+            <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
+            <td class="px-4 py-2">
+              <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download class="bg-[#6E38E0] text-white px-3 py-1 rounded text-sm">
+                Voir
+              </a>
+              <span v-else class="text-gray-400 text-sm">Aucune</span>
             </td>
-              <td class="px-4 py-2">{{ demande.domaine }}</td>
-              <td class="px-4 py-2">{{ demande.typeStage }}</td>
-              <td class="px-4 py-2">{{ demande.duree }} mois</td>
-              <td class="px-4 py-2">{{ demande.dateDebut }}</td>
-              <td class="px-4 py-2">
-                <a
-                  :href="demande.lettre"
-                  target="_blank"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                  download
-                >
-                  Voir 
-                </a>
-              </td>
-              <td class="px-4 py-2">
-                <span :class="['px-2 py-1 rounded text-white text-sm', statusColor(getStatutActuel(demande))]">
-                  {{ getStatutActuel(demande) }}
-                </span>
-              </td>
-              <td v-if="hasAnyActions" class="px-4 py-2">
-                  <div class="flex gap-2 flex-wrap md:flex-nowrap sm:flex-nowrap">
-                <template v-if="getStatutActuel(demande) !== 'En cours'">
-                  <button
-                    v-if="['En attente', 'Refusé'].includes(getStatutActuel(demande))"
-                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('accepter', demande)"
-                  >
-                    Accepter
-                  </button>
-                  <button
-                    v-if="['En attente', 'Accepté', 'Terminé'].includes(getStatutActuel(demande))"
-                    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('refuser', demande)"
-                  >
-                    Refuser
-                  </button>
+            <td class="px-4 py-2 flex gap-2 flex-wrap">
+              <button @click="confirmAction('accepter', demande)" class="p-2 rounded-full bg-[#1e7e34] flex items-center justify-center" :disabled="demande.processingType">
+                <CheckIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+                <svg v-else-if="demande.processingType === 'accepter'" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </button>
+              <button @click="confirmAction('refuser', demande)" class="p-2 rounded-full bg-[#922026] flex items-center justify-center" :disabled="demande.processingType">
+                <XMarkIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+                <svg v-else-if="demande.processingType === 'refuser'" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </button>
+              <button @click="confirmAction('reviser', demande)" class="p-2 rounded-full bg-[#b58500] flex items-center justify-center" :disabled="demande.processingType">
+                <PencilSquareIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
+              </button>
+            </td>
+          </tr>
 
-                  <button
-                    v-if="['Accepté', 'Refusé', 'Terminé'].includes(getStatutActuel(demande))"
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm"
-                    @click="handleAction('reviser', demande)"
-                  >
-                    Réviser
-                  </button>
-                </template>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <!-- 📚 Pagination -->
-      <div class="mt-6 flex justify-center gap-2">
-        <button
-          @click="changePage(currentPage - 1)"
-          :disabled="currentPage === 1"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Précédent
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="changePage(page)"
-          :class="[
-            'px-3 py-1 rounded',
-            currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          ]"
-        >
-          {{ page }}
-        </button>
-        <button
-          @click="changePage(currentPage + 1)"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-1 rounded bg-gray-600 text-white disabled:opacity-30"
-        >
-          Suivant
-        </button>
-      </div>
+          <tr v-if="!paginatedDemandes.length">
+            <td colspan="7" class="text-center py-6 text-gray-400">Aucune demande trouvée.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </section>
 
+    <!-- Pagination -->
+    <div class="mt-6 flex justify-center gap-2">
+      <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Précédent</button>
+      <button v-for="page in totalPages" :key="page" @click="changePage(page)" :class="[currentPage === page ? 'bg-[#6E38E0] text-white' : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 'px-3 py-1 rounded']">{{ page }}</button>
+      <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Suivant</button>
+    </div>
+  </div>
+</section>
 </template>
-
-<style scoped>
-/* Optionnel: ajustements visuels */
-</style>
-
