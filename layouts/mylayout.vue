@@ -196,7 +196,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import DashboardIcon from '@/components/icons/dashboardicon.vue'
-import Supports from '@/components/entreprise/Supports.vue'
+import Supports from '@/components/entreprise/supports.vue'
 import notifIcon from '@/assets/images/nav_img/notif.png'
 import settingIcon from '@/assets/images/nav_img/setting.png'
 
