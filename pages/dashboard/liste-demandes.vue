@@ -13,12 +13,12 @@
           :key="filter"
           @click="changeStatus(filter)"
           class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
-                 hover:bg-gradient-to-r hover:from-[#FF5F36] hover:to-[#6E38E0] hover:text-white"
-          :class="selectedFilter === filter ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold' : textClass"
+                 hover:bg-[#7B49E5] hover:to-[#6E38E0] hover:text-white"
+          :class="selectedFilter === filter ? 'bg-[#7B49E5] text-white font-semibold' : textClass"
         >
           {{ filter }}
           <span
-            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#FF5F36] transition-opacity duration-200"
+            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#7B49E5] transition-opacity duration-200"
             :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
           ></span>
         </div>
@@ -29,8 +29,8 @@
     <div class="flex justify-end mb-4">
       <NuxtLink
         to="/dashboard/demande-stage"
-        class="px-4 py-2 rounded text-sm text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
-               hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
+        class="px-4 py-2 rounded text-sm text-white bg-[#7B49E5]
+               hover:from-[#7B49E5] hover:to-[#7B49E5] transition-all duration-200"
       >
         Faire une demande
       </NuxtLink>
@@ -65,7 +65,7 @@
     <!-- Tableau -->
     <div v-if="!loading && !error" class="overflow-x-auto rounded-lg shadow-md">
       <table class="min-w-[700px] w-full border rounded-lg text-sm sm:text-base border-gray-300 dark:border-gray-600">
-        <thead class="transition-colors bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white">
+        <thead class="transition-colors bg-[#7B49E5] text-white">
           <tr>
             <th class="px-4 py-3 text-left">Domaine</th>
             <th class="px-4 py-3 text-left">Type</th>
@@ -90,7 +90,7 @@
                 v-if="demande.lettre"
                 :href="demande.lettre"
                 target="_blank"
-                class="px-3 py-1 rounded text-sm text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+                class="px-3 py-1 rounded text-sm text-white bg-[#7B49E5]
                        hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
                 download
               >
@@ -114,7 +114,7 @@
       <button
         @click="changePage(currentPage - 1)"
         :disabled="currentPage === 1"
-        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-[#7B49E5]
                hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
       >
         Précédent
@@ -126,7 +126,7 @@
         :class="[ 
           'px-3 py-1 rounded',
           currentPage === page
-            ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white'
+            ? 'bg-[#7B49E5] text-white'
             : ['border border-gray-300 dark:border-gray-600', textClass, hoverClass]
         ]"
       >
@@ -135,7 +135,7 @@
       <button
         @click="changePage(currentPage + 1)"
         :disabled="currentPage === totalPages"
-        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]
+        class="px-3 py-1 rounded disabled:opacity-30 text-white bg-[#7B49E5]
                hover:from-[#FF704D] hover:to-[#7B49E5] transition-all duration-200"
       >
         Suivant

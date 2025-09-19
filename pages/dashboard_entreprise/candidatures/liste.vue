@@ -59,7 +59,8 @@
               <span v-else class="text-gray-400 text-sm">Aucune</span>
             </td>
             <td v-if="hasAnyActions" class="px-4 py-2 flex gap-2 flex-wrap">
-              <button @click="handleAction('accepter', demande)" 
+              <!-- Bouton accepter -->
+              <button @click="openConfirmModal('accepter', demande)" 
                       class="p-2 rounded-full bg-[#1e7e34] flex items-center justify-center"
                       :disabled="demande.processingType">
                 <CheckIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
@@ -70,7 +71,8 @@
                 </svg>
               </button>
 
-              <button @click="handleAction('refuser', demande)" 
+              <!-- Bouton refuser -->
+              <button @click="openConfirmModal('refuser', demande)" 
                       class="p-2 rounded-full bg-[#922026] flex items-center justify-center"
                       :disabled="demande.processingType">
                 <XMarkIcon v-if="!demande.processingType" class="h-5 w-5 text-white"/>
@@ -81,6 +83,7 @@
                 </svg>
               </button>
 
+              <!-- Bouton réviser -->
               <button @click="handleAction('reviser', demande)" 
                       class="p-2 rounded-full bg-[#b58500] flex items-center justify-center"
                       :disabled="demande.processingType">
@@ -110,15 +113,29 @@
 
     <!-- Modal Révision -->
     <div v-if="revisionModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-        <h2 class="text-white text-lg font-semibold mb-4">Réviser la demande</h2>
-        <label class="text-gray-200">Durée (mois)</label>
-        <input v-model="revisionModal.duration" type="number" class="w-full mb-4 p-2 rounded text-black"/>
-        <label class="text-gray-200">Date de début</label>
-        <input v-model="revisionModal.startDate" type="date" class="w-full mb-4 p-2 rounded text-black"/>
+      <div class="bg-white p-6 rounded-lg w-full max-w-md">
+        <h2 class="text-gray-800 text-lg font-semibold mb-4">Réviser la demande</h2>
+        <label class="text-gray-800">Durée (mois)</label>
+        <input v-model="revisionModal.duration" type="number" class="w-full px-4 py-2 rounded-md border border-gray-300"/>
+        <label class="text-gray-800">Date de début</label>
+        <input v-model="revisionModal.startDate" type="date" class="w-full px-4 py-2 rounded-md border border-gray-300"/>
+        <div class="flex justify-end mt-7 gap-2">
+          <button @click="revisionModal.visible = false" class="px-4 py-2 bg-red-500 rounded text-white">Annuler</button>
+          <button @click="submitRevision" class="px-4 py-2 bg-[#7B49E5] rounded text-white">Valider</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Confirmation -->
+    <div v-if="confirmModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="bg-white p-6 rounded-lg w-full max-w-md">
+        <h2 class="text-gray-800 text-lg font-semibold mb-4">Confirmation</h2>
+        <p class="mb-6 text-gray-700">Voulez-vous vraiment {{ confirmModal.action === 'accepter' ? 'accepter' : 'refuser' }} cette demande ?</p>
         <div class="flex justify-end gap-2">
-          <button @click="revisionModal.visible = false" class="px-4 py-2 bg-gray-600 rounded text-white">Annuler</button>
-          <button @click="submitRevision" class="px-4 py-2 bg-[#b58500] rounded text-white">Valider</button>
+          <button @click="confirmModal.visible = false" class="px-4 py-2 bg-gray-400 rounded text-white">Annuler</button>
+          <button @click="submitConfirmAction" :class="confirmModal.action === 'accepter' ? 'bg-green-600' : 'bg-red-600'" class="px-4 py-2 rounded text-white">
+            Confirmer
+          </button>
         </div>
       </div>
     </div>
@@ -159,6 +176,7 @@ const statusLabels = { pending: 'En attente', accepted: 'Accepté', rejected: 'R
 const statusFilters = ['pending', 'accepted', 'rejected', 'revised']
 
 const revisionModal = ref({ visible: false, demande: null, duration: '', startDate: '' })
+const confirmModal = ref({ visible: false, demande: null, action: '' })
 const feedbackModal = ref({ visible: false, message: '', type: 'success' })
 
 function showFeedback(message: string, type: string = 'success') {
@@ -196,19 +214,18 @@ const paginatedDemandes = computed(() => {
 })
 const hasAnyActions = computed(() => paginatedDemandes.value.some(d => d.status === 'pending'))
 
-async function handleAction(type: string, demande: any) {
-  if (demande.status !== 'pending' || demande.processingType) return
+function openConfirmModal(action: string, demande: any) {
+  confirmModal.value = { visible: true, demande, action }
+}
 
-  demande.processingType = type
+async function submitConfirmAction() {
+  const { demande, action } = confirmModal.value
+  if (!demande || !action) return
 
-  if (type === 'reviser') {
-    revisionModal.value = { visible: true, demande, duration: demande.duree, startDate: demande.dateDebut }
-    delete demande.processingType
-    return
-  }
+  demande.processingType = action
+  confirmModal.value.visible = false
 
-  const action = type === 'accepter' ? 'accept' : type === 'refuser' ? 'reject' : null
-  if (!action) return
+  const apiAction = action === 'accepter' ? 'accept' : 'reject'
 
   try {
     const res = await fetch(`https://digit-cursus-backend.onrender.com/api/demandes/internship-requests/${demande.id}/approve-reject/`, {
@@ -217,15 +234,26 @@ async function handleAction(type: string, demande: any) {
         'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ action })
+      body: JSON.stringify({ action: apiAction })
     })
     if (!res.ok) throw new Error(`Erreur: ${res.status}`)
-    demande.status = action === 'accept' ? 'accepted' : 'rejected'
-    showFeedback(`Demande ${action === 'accept' ? 'acceptée' : 'refusée'} avec succès.`)
+    demande.status = apiAction === 'accept' ? 'accepted' : 'rejected'
+    showFeedback(`Demande ${apiAction === 'accept' ? 'acceptée' : 'refusée'} avec succès.`)
   } catch (err: any) {
     showFeedback(`Erreur lors de la mise à jour: ${err.message}`, 'error')
   } finally {
     delete demande.processingType
+  }
+}
+
+async function handleAction(type: string, demande: any) {
+  if (demande.status !== 'pending' || demande.processingType) return
+  demande.processingType = type
+
+  if (type === 'reviser') {
+    revisionModal.value = { visible: true, demande, duration: demande.duree, startDate: demande.dateDebut }
+    delete demande.processingType
+    return
   }
 }
 
@@ -253,7 +281,6 @@ async function submitRevision() {
     delete demande.processingType
   }
 }
-
 onMounted(async () => {
   try {
     if (!token.value) throw new Error('Token non trouvé')

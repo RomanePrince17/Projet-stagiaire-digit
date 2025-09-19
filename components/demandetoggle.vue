@@ -17,7 +17,7 @@
           'block px-4 py-2 rounded transition',
           hoverClass,
           textClass,
-          route.path === '/dashboard/demande-stage' ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold' : ''
+          route.path === '/dashboard/demande-stage' ? 'bg-[#7B49E5] text-white font-semibold' : ''
         ]"
       >
         🎓 Demander un Stage
@@ -29,7 +29,7 @@
           'block px-4 py-2 rounded transition',
           hoverClass,
           textClass,
-          route.path === '/dashboard/liste-demandes' ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold' : ''
+          route.path === '/dashboard/liste-demandes' ? 'bg-[#7B49E5] text-white font-semibold' : ''
         ]"
       >
         📋 Liste des demandes

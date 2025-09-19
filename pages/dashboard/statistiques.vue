@@ -214,12 +214,12 @@ function changeStatus(filter: string) {
           :key="filter"
           @click="changeStatus(filter)"
           class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
-                 hover:bg-gradient-to-r hover:from-[#FF5F36] hover:to-[#6E38E0] hover:text-white"
-          :class="selectedFilter === filter ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold' : textClass"
+                 hover:bg-[#7B49E5] hover:text-white"
+          :class="selectedFilter === filter ? 'bg-[#7B49E5] text-white font-semibold' : textClass"
         >
           {{ filter }}
           <span
-            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#FF5F36] transition-opacity duration-200"
+            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#7B49E5] transition-opacity duration-200"
             :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
           ></span>
         </div>
@@ -230,7 +230,7 @@ function changeStatus(filter: string) {
   <!-- Tableau -->
   <div class="p-4 rounded-lg shadow-md transition-colors bg-[#5a2fc4]/10">
     <div class="flex justify-end mb-5">
-      <NuxtLink to="/dashboard/demande-stage" class="bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] hover:bg-[#4a23a6] px-4 py-2 rounded text-white">
+      <NuxtLink to="/dashboard/demande-stage" class="bg-[#7B49E5] hover:bg-[#4a23a6] px-4 py-2 rounded text-white">
         Faire une demande
       </NuxtLink>
     </div>
@@ -245,7 +245,7 @@ function changeStatus(filter: string) {
       </div>
       <!-- Tableau -->
       <table class="w-full border rounded-lg" v-show="!tableLoading">
-        <thead class="bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white">
+        <thead class="bg-[#7B49E5] text-white">
           <tr>
             <th class="px-4 py-3 text-left">Domaine</th>
             <th class="px-4 py-3 text-left">Type</th>
@@ -263,7 +263,7 @@ function changeStatus(filter: string) {
             <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
             <td class="px-4 py-2">
               <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download
-                 class="bg-gradient-to-r from-[#FF5F36] to-[#6E38E0]  text-white px-3 py-1 rounded text-sm">
+                 class="bg-[#7B49E5]  text-white px-3 py-1 rounded text-sm">
                 Voir
               </a>
               <span v-else class="text-gray-400 text-sm">Aucune</span>
@@ -281,16 +281,16 @@ function changeStatus(filter: string) {
     <!-- Pagination -->
     <div class="mt-6 flex justify-center gap-2">
       <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1"
-        class="px-3 py-1 rounded bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white disabled:opacity-30">Précédent</button>
+        class="px-3 py-1 rounded bg-[#7B49E5] text-white disabled:opacity-30">Précédent</button>
       <button v-for="page in totalPages" :key="page" @click="changePage(page)"
         :class="[currentPage === page 
-          ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white' 
-          : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 
+          ? 'bg-[#7B49E5] text-white' 
+          : 'bg-gray-700 text-gray-300 hover:bg-[#7B49E5]', 
           'px-3 py-1 rounded']">
         {{ page }}
       </button>
       <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages"
-        class="px-3 py-1 rounded bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white disabled:opacity-30">Suivant</button>
+        class="px-3 py-1 rounded bg-[#7B49E5] text-white disabled:opacity-30">Suivant</button>
     </div>
   </div>
 </section>

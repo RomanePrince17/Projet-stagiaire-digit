@@ -33,7 +33,7 @@
         </div>
 
         <!-- Mot de passe avec visibilité -->
-        <div class="mb-6 relative">
+        <div class="mb-4 relative">
           <label class="block mb-1 text-sm font-medium text-white">Mot de passe</label>
           <input
             :type="showPassword ? 'text' : 'password'"
@@ -47,8 +47,20 @@
             @click="showPassword = !showPassword"
             class="absolute top-[38px] right-3 text-white/80 hover:text-white"
           >
-            <!-- Icône à insérer (eye/eye-off) -->
+            <!-- Icône eye/eye-off -->
           </button>
+        </div>
+
+        <!-- Confirmation du mot de passe -->
+        <div class="mb-6 relative">
+          <label class="block mb-1 text-sm font-medium text-white">Confirmer le mot de passe</label>
+          <input
+            :type="showPassword ? 'text' : 'password'"
+            v-model="form.password_confirm"
+            class="w-full px-4 py-2 border border-white/50 rounded-md bg-transparent text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-white"
+            placeholder="********"
+            required
+          />
         </div>
 
         <!-- Bouton d'inscription -->
@@ -58,10 +70,7 @@
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
           </svg>
           <span v-if="loadingRegister">Création...</span>
-          <span v-else>
-           
-            S'inscrire
-          </span>
+          <span v-else>S'inscrire</span>
         </BaseButton>
       </form>
 
@@ -97,7 +106,12 @@ import axios from 'axios'
 import BaseButton from '../components/base/button.vue'
 
 const router = useRouter()
-const form = ref({ username: '', email: '', password: '' })
+const form = ref({
+  username: '',
+  email: '',
+  password: '',
+  password_confirm: ''
+})
 const showPassword = ref(false)
 const loadingRegister = ref(false)
 const errorMessage = ref('')
@@ -106,13 +120,21 @@ const handleRegister = async () => {
   loadingRegister.value = true
   errorMessage.value = ''
 
+  // Validation locale : vérifier si les mots de passe correspondent
+  if (form.value.password !== form.value.password_confirm) {
+    errorMessage.value = 'Les mots de passe ne correspondent pas.'
+    loadingRegister.value = false
+    return
+  }
+
   try {
     const response = await axios.post(
       'https://digit-cursus-backend.onrender.com/api/auth/register/',
       {
         username: form.value.username,
         email: form.value.email,
-        password: form.value.password
+        password: form.value.password,
+        password_confirm: form.value.password_confirm
       },
       { headers: { 'Content-Type': 'application/json' } }
     )

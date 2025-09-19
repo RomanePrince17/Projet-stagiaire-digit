@@ -25,7 +25,7 @@
             hoverClass,
             textClass,
             route.path === item.path
-              ? 'bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] text-white font-semibold'
+              ? 'bg-[#7B49E5] text-white font-semibold'
               : ''
           ]"
         >
