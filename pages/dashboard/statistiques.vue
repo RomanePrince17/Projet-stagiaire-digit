@@ -169,40 +169,36 @@ function changeStatus(filter: string) {
 <template>
 <section :class="['min-h-screen  mt-20 px-6 py-8 max-w-6xl mx-auto', mainClass]">
   <!-- Header -->
-
-
   <!-- Loading / Erreur global -->
   <div v-if="loading" class="flex flex-col items-center justify-center py-10">
-    <svg class="animate-spin h-12 w-12 mb-4 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg class="animate-spin h-12 w-12 mb-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      <path class="opacity-75 fill-blue-500" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
     </svg>
   </div>
 
   <div v-else-if="error" class="flex flex-col items-center py-10">
     <p class="text-red-500 mb-4">{{ error }}</p>
-    <button @click="fetchDemandes" class="px-4 py-2 rounded bg-[#5a2fc4] hover:bg-[#4a23a6] text-white">
+    <button @click="fetchDemandes" class="px-4 py-2 rounded bg-blue-700 hover:bg-blue-700 text-white">
       Recharger
     </button>
   </div>
 
 <!-- Statistiques -->
 <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
-  <div class="p-6 rounded-lg shadow-sm dark:shadow-gray-800/80 text-center transition-colors transition-shadow ">
-    <p class="text-4xl font-bold bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] bg-clip-text text-transparent">
+  <div class="p-6 rounded-lg shadow-sm dark:shadow-gray-800/80 text-center  transition-shadow ">
+    <p class="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
       {{ animatedStats.totalCandidatures }}
     </p>
     <p class="text-gray-400 mt-1">Stages totaux</p>
   </div>
 
   <div class="p-6 rounded-lg shadow-sm dark:shadow-gray-800/80 text-center transition-colors transition-shadow ">
-    <p class="text-4xl font-bold bg-gradient-to-r from-[#FF5F36] to-[#6E38E0] bg-clip-text text-transparent">
+    <p class="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
       {{ animatedStats.candidaturesEnAttente }}
     </p>
     <p class="text-gray-400 mt-1">Stages en attente</p>
   </div>
-
- 
 </div>
 
 <h1 class="text-2xl mb-8">Mes demandes</h1>
@@ -214,12 +210,11 @@ function changeStatus(filter: string) {
           :key="filter"
           @click="changeStatus(filter)"
           class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
-                 hover:bg-[#7B49E5] hover:text-white"
-          :class="selectedFilter === filter ? 'bg-[#7B49E5] text-white font-semibold' : textClass"
+                 hover:bg-blue-500 hover:text-white"
+          :class="selectedFilter === filter ? 'bg-blue-700 text-white font-semibold' : textClass"
         >
           {{ filter }}
           <span
-            class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#7B49E5] transition-opacity duration-200"
             :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
           ></span>
         </div>
@@ -230,7 +225,7 @@ function changeStatus(filter: string) {
   <!-- Tableau -->
   <div class="p-4 rounded-lg shadow-md transition-colors bg-[#5a2fc4]/10">
     <div class="flex justify-end mb-5">
-      <NuxtLink to="/dashboard/demande-stage" class="bg-[#7B49E5] hover:bg-[#4a23a6] px-4 py-2 rounded text-white">
+      <NuxtLink to="/dashboard/demande-stage" class="bg-blue-700 hover:bg-blue-700 px-4 py-2 rounded text-white">
         Faire une demande
       </NuxtLink>
     </div>
@@ -238,14 +233,14 @@ function changeStatus(filter: string) {
     <div class="relative overflow-x-auto">
       <!-- Spinner tableau -->
       <div v-if="tableLoading" class="flex justify-center items-center py-20 bg-white/70 dark:bg-black/50">
-        <svg class="animate-spin h-10 w-10 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin h-10 w-10 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>
       </div>
       <!-- Tableau -->
       <table class="w-full border rounded-lg" v-show="!tableLoading">
-        <thead class="bg-[#7B49E5] text-white">
+        <thead class="bg-blue-700 text-white">
           <tr>
             <th class="px-4 py-3 text-left">Domaine</th>
             <th class="px-4 py-3 text-left">Type</th>
@@ -263,7 +258,7 @@ function changeStatus(filter: string) {
             <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
             <td class="px-4 py-2">
               <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download
-                 class="bg-[#7B49E5]  text-white px-3 py-1 rounded text-sm">
+                 class="bg-blue-700  text-white px-3 py-1 rounded text-sm">
                 Voir
               </a>
               <span v-else class="text-gray-400 text-sm">Aucune</span>
@@ -281,16 +276,16 @@ function changeStatus(filter: string) {
     <!-- Pagination -->
     <div class="mt-6 flex justify-center gap-2">
       <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1"
-        class="px-3 py-1 rounded bg-[#7B49E5] text-white disabled:opacity-30">Précédent</button>
+        class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Précédent</button>
       <button v-for="page in totalPages" :key="page" @click="changePage(page)"
         :class="[currentPage === page 
-          ? 'bg-[#7B49E5] text-white' 
-          : 'bg-gray-700 text-gray-300 hover:bg-[#7B49E5]', 
+          ? 'bg-blue-700 text-white' 
+          : 'bg-gray-700 text-gray-300 hover:bg-blue-700', 
           'px-3 py-1 rounded']">
         {{ page }}
       </button>
       <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages"
-        class="px-3 py-1 rounded bg-[#7B49E5] text-white disabled:opacity-30">Suivant</button>
+        class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Suivant</button>
     </div>
   </div>
 </section>

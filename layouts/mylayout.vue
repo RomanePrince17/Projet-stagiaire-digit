@@ -14,7 +14,21 @@
         >
           <component :is="item.icon" class="w-6 h-6" :class="textClass" />
           <span class="font-medium">{{ item.name }}</span>
+
         </NuxtLink>
+        <!-- Bouton Créer un domaine -->
+  <button
+    @click="navigateTo('/dashboard_entreprise/domaines/create')"
+    :class="['flex items-center gap-4 px-4 py-3 w-full rounded-lg font-medium transition bg-indigo-600 text-white hover:bg-indigo-700']"
+  >
+    ➕
+    <span>Créer un domaine</span>
+  </button>
+        <!-- Section Collaborateurs -->
+      <SidebarCollaborateurs
+        :theme="theme"         
+        @select="handleCollaboratorSelect"  
+      />
       </nav>
     </aside>
 
@@ -138,14 +152,14 @@
                 <p><strong>École :</strong> {{ professionalProfile.school }}</p>
                 <p><strong>Diplôme :</strong> {{ professionalProfile.degree }}</p>
                 <p><strong>Expérience :</strong> {{ professionalProfile.experience }}</p>
-                <p><strong>CV :</strong>  <a  target="_blank" download
-                 class="bg-[#5a2fc4]  text-white px-3 py-1 rounded text-sm">
-                Voir
-              </a></p>
-                <p><strong>Compétences :</strong> {{ professionalProfile.skills.join(', ') }}</p>
-                <button @click="startEditingProfessionalProfile" class="px-4 py-2 rounded-lg text-white font-semibold bg-[#5a2fc4] hover:bg-indigo-700 transition mt-3">
-                  ✏️ Modifier
-                </button>
+                <button><strong>CV :</strong>  
+            <a 
+              :href="professionalProfile.cv" 
+              target="_blank" 
+              class="bg-[#5a2fc4] text-white px-3 py-1 rounded text-sm">
+              Voir
+            </a>
+          </button>
               </div>
 
               <form v-else @submit.prevent="updateProfessionalProfile" class="space-y-4">
@@ -198,7 +212,24 @@ import DashboardIcon from '@/components/icons/dashboardicon.vue'
 import supports from '@/components/entreprise/supports.vue'
 import notifIcon from '@/assets/images/nav_img/notif.png'
 import settingIcon from '@/assets/images/nav_img/setting.png'
+import SidebarCollaborateurs from '@/components/SidebarCollaborateurs.vue'
 
+// Fonction pour gérer la sélection du menu Collaborateurs
+const handleCollaboratorSelect = (item: string) => {
+  console.log('Item collaborateur sélectionné :', item)
+  // Ici tu peux faire la navigation via Nuxt
+  switch(item) {
+    case 'create':
+      navigateTo('/dashboard_entreprise/collaborateurs/create')
+      break
+    case 'list':
+      navigateTo('/dashboard_entreprise/collaborateurs/list')
+      break
+    case 'reports':
+      navigateTo('/dashboard_entreprise/collaborateurs/reports')
+      break
+  }
+}
 /* ==== Sidebar & Navbar ==== */
 const isOpen = ref(false)
 const menuRef = ref(null)
@@ -206,6 +237,7 @@ onClickOutside(menuRef, () => { isOpen.value = false })
 
 const navItems = [
   { name: 'Statistiques', path: '/dashboard_entreprise/statistiques', icon: DashboardIcon },
+  
   { name: 'Demandes reçues', path: '/dashboard_entreprise/candidatures/liste', icon: supports },
 ]
 

@@ -193,20 +193,20 @@ onMounted(() => {
 </script>
 
 <template>
-<section :class="['min-h-screen mt-10 px-6 max-w-6xl mx-auto', mainClass]">
+<section :class="['min-h-screen mt-20 px-6 max-w-6xl mx-auto', mainClass]">
 
 
 
   <!-- Loading / Erreur global -->
   <div v-if="loading" class="flex flex-col  items-center justify-center py-10">
-    <svg class="animate-spin h-12 w-12 mb-4 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg class="animate-spin h-12 w-12 mb-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      <path class="opacity-75 fill-blue-700" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
     </svg>
   </div>
   <div v-else-if="error" class="flex flex-col items-center py-10">
     <p class="text-red-500 mb-4">{{ error }}</p>
-    <button @click="fetchDemandes" class="px-4 py-2 rounded bg-[#5a2fc4] hover:bg-[#4a23a6] text-white">
+    <button @click="fetchDemandes" class="px-4 py-2 rounded bg-blue-700 hover:bg-blue-700 text-white">
       Recharger
     </button>
   </div>
@@ -214,13 +214,13 @@ onMounted(() => {
   <!-- Statistiques -->
   <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
     <div class="p-6 rounded-lg shadow-sm text-center transition-colors">
-      <p class="text-4xl font-bold bg-[#6E38E0] bg-clip-text text-transparent">
+      <p class="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
         {{ animatedStats.totalCandidatures }}
       </p>
       <p class="text-gray-400 mt-1">Stages totaux</p>
     </div>
     <div class="p-6 rounded-lg shadow-sm text-center transition-colors">
-      <p class="text-4xl font-bold bg-[#6E38E0] bg-clip-text text-transparent">
+      <p class="text-4xl font-bold bg-blue-700 bg-clip-text text-transparent">
         {{ animatedStats.candidaturesEnAttente }}
       </p>
       <p class="text-gray-400 mt-1">Stages en attente</p>
@@ -228,23 +228,17 @@ onMounted(() => {
   </div>
 
   <!-- Bande de filtres horizontale -->
-  <div class="relative mb-6 border-b border-gray-700 overflow-x-auto no-scrollbar">
-    <div class="flex gap-6 w-max px-2">
-      <div
-        v-for="filter in statusFilters"
-        :key="filter"
-        @click="changeStatus(filter)"
-        class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
-               hover:bg-[#6E38E0] hover:text-white"
-        :class="selectedFilter === filter ? 'bg-[#6E38E0] text-white font-semibold' : textClass"
-      >
-        {{ filter }}
-        <span
-          class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-[#6E38E0] transition-opacity duration-200"
-          :class="selectedFilter === filter ? 'opacity-100' : 'opacity-0'"
-        ></span>
+      <!-- Filtres de statut -->
+    <div class="relative mb-6 overflow-x-auto no-scrollbar">
+      <div class="flex gap-6 w-max px-2">
+        <div v-for="filter in statusFilters" :key="filter" @click="changeStatus(filter)"
+             class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
+                    hover:bg-blue-700 hover:text-white"
+             :class="selectedStatus === filter ? 'bg-blue-700 text-white font-semibold' : textClass">
+          {{ getFilterLabel(filter) }}
+        </div>
       </div>
-    </div>
+    
   </div>
 
   <!-- Tableau -->
@@ -254,9 +248,9 @@ onMounted(() => {
     <div class="relative overflow-x-auto">
       <!-- Spinner tableau -->
       <div v-if="tableLoading" class="flex justify-center items-center py-20 bg-white/70 dark:bg-black/50">
-        <svg class="animate-spin h-10 w-10 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin h-10 w-10 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          <path class="opacity-75 fill-blue-700" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>
       </div>
       <table class="w-full border rounded-lg" v-show="!tableLoading">
@@ -279,7 +273,7 @@ onMounted(() => {
             <td class="px-4 py-2" :class="textClass">{{ demande.duree }} mois</td>
             <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
             <td class="px-4 py-2">
-              <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download class="bg-[#6E38E0] text-white px-3 py-1 rounded text-sm">
+              <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download class="bg-blue-700 text-white px-3 py-1 rounded text-sm">
                 Voir
               </a>
               <span v-else class="text-gray-400 text-sm">Aucune</span>
@@ -314,9 +308,9 @@ onMounted(() => {
 
     <!-- Pagination -->
     <div class="mt-6 flex justify-center gap-2">
-      <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Précédent</button>
-      <button v-for="page in totalPages" :key="page" @click="changePage(page)" :class="[currentPage === page ? 'bg-[#6E38E0] text-white' : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 'px-3 py-1 rounded']">{{ page }}</button>
-      <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Suivant</button>
+      <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Précédent</button>
+      <button v-for="page in totalPages" :key="page" @click="changePage(page)" :class="[currentPage === page ? 'bg-blue-700 text-white' : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 'px-3 py-1 rounded']">{{ page }}</button>
+      <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Suivant</button>
     </div>
   </div>
 </section>

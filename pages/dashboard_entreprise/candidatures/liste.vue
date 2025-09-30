@@ -12,12 +12,12 @@
     </div>
 
     <!-- Filtres de statut -->
-    <div class="relative mb-6 border-b border-gray-700 overflow-x-auto no-scrollbar">
+    <div class="relative mb-6 overflow-x-auto no-scrollbar">
       <div class="flex gap-6 w-max px-2">
         <div v-for="filter in statusFilters" :key="filter" @click="changeStatus(filter)"
              class="relative cursor-pointer py-2 px-4 transition-all duration-200 ease-in-out whitespace-nowrap rounded-full
-                    hover:bg-[#6E38E0] hover:text-white"
-             :class="selectedStatus === filter ? 'bg-[#6E38E0] text-white font-semibold' : textClass">
+                    hover:bg-blue-700 hover:text-white"
+             :class="selectedStatus === filter ? 'bg-blue-700 text-white font-semibold' : textClass">
           {{ getFilterLabel(filter) }}
         </div>
       </div>
@@ -28,9 +28,9 @@
 
       <!-- Spinner loading -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-10">
-        <svg class="animate-spin h-12 w-12 mb-4 text-[#5a2fc4]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin h-12 w-12 mb-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75 fill-[#5a2fc4]" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          <path class="opacity-75 fill-blue-700" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
         </svg>
       </div>
 
@@ -55,7 +55,7 @@
             <td class="px-4 py-2" :class="textClass">{{ demande.dateDebut }}</td>
             <td class="px-4 py-2">
               <a v-if="demande.lettre" :href="demande.lettre" target="_blank" download
-                 class="bg-[#6E38E0] text-white px-3 py-1 rounded text-sm">Voir</a>
+                 class="bg-blue-700 text-white px-3 py-1 rounded text-sm">Voir</a>
               <span v-else class="text-gray-400 text-sm">Aucune</span>
             </td>
             <td v-if="hasAnyActions" class="px-4 py-2 flex gap-2 flex-wrap">
@@ -101,13 +101,13 @@
       <!-- Pagination -->
       <div class="mt-6 flex justify-center gap-2">
         <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" 
-                class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Précédent</button>
+                class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Précédent</button>
         <button v-for="page in totalPages" :key="page" @click="changePage(page)"
-                :class="[currentPage === page ? 'bg-[#6E38E0] text-white' : 'bg-gray-700 text-gray-300 hover:bg-[#5a2fc4]', 'px-3 py-1 rounded']">
+                :class="[currentPage === page ? 'bg-blue-700 text-white' : 'bg-gray-700 text-gray-300 hover:bg-blue-700', 'px-3 py-1 rounded']">
           {{ page }}
         </button>
         <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" 
-                class="px-3 py-1 rounded bg-[#6E38E0] text-white disabled:opacity-30">Suivant</button>
+                class="px-3 py-1 rounded bg-blue-700 text-white disabled:opacity-30">Suivant</button>
       </div>
     </div>
 
@@ -121,7 +121,7 @@
         <input v-model="revisionModal.startDate" type="date" class="w-full px-4 py-2 rounded-md border border-gray-300"/>
         <div class="flex justify-end mt-7 gap-2">
           <button @click="revisionModal.visible = false" class="px-4 py-2 bg-red-500 rounded text-white">Annuler</button>
-          <button @click="submitRevision" class="px-4 py-2 bg-[#7B49E5] rounded text-white">Valider</button>
+          <button @click="submitRevision" class="px-4 py-2 bg-blue-700 rounded text-white">Valider</button>
         </div>
       </div>
     </div>

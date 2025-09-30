@@ -176,7 +176,7 @@
         <button
           type="submit"
           :disabled="loading"
-          class="px-8 py-2 rounded-md font-semibold bg-[#7B49E5] text-white hover:from-[#e04e24] hover:to-[#5a2fc4] transition duration-200 flex items-center justify-center gap-2"
+          class="px-8 py-2 rounded-md font-semibold bg-blue-700 text-white transition duration-200 flex items-center justify-center gap-2"
         >
           <svg
             v-if="loading"

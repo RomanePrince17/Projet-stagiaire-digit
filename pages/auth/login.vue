@@ -172,8 +172,8 @@ const handleLogin = async () => {
     setTimeout(() => {
       switch (data.user.role) {
         case 'intern': router.push('/dashboard/statistiques'); break
-        case 'admin': router.push('/dashboard_entreprise/statistiques'); break
-        case 'company': router.push('/dashboard/entreprise'); break
+        case 'admin': router.push('/dashboard_entreprise/candidatures/liste'); break
+        case 'collaborator': router.push('/dashboard_entreprise/candidatures/liste'); break
         default: router.push('/')
       }
     }, 1500)

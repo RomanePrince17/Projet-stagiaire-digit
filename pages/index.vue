@@ -162,7 +162,6 @@ onBeforeUnmount(() => { window.removeEventListener("scroll", handleScroll) });
 const texts = [
   "Trouvez votre stage facilement avec Digit Consults",
   "Un clic suffit pour décrocher votre futur stage",
-  "Votre avenir professionnel commence ici"
 ];
 
 const currentText = ref("");
